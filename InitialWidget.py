@@ -65,7 +65,7 @@ class InitialWindow(QWidget):
         base, _ = os.path.splitext(file_name)
         anot_file_path = f"{base}_anot.pkl"
         if file_name and os.path.exists(anot_file_path):
-            self.anot_window = AnotationWindow(self, file_name)
+            self.anot_window = AnotationWindow(self.controller, file_name)
             self.controller.load_anot_window(self.anot_window)
         elif not os.path.exists(anot_file_path):
             QMessageBox.warning(self, "Error", "NO ANNOTATION FILE FOUND")
