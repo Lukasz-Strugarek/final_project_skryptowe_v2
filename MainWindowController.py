@@ -12,13 +12,14 @@ class MainWindow(QMainWindow):
         super().__init__()
         self.setWindowTitle("Moja Aplikacja")
         self.setGeometry(100, 100, 400, 200)
-        self.setCentralWidget(InitialWindow(self))
+        self.load_initial_window()
 
     def load_tiff_window(self):
-
+        self.setGeometry(100, 100, 600, 400)
         self.setCentralWidget(TiffWindow(self))
 
     def load_new_file_window(self):
+        self.setGeometry(100, 100, 400, 200)
         NewFileWindow().show()
 
     def load_initial_window(self):
@@ -26,9 +27,11 @@ class MainWindow(QMainWindow):
         self.setCentralWidget(InitialWindow(self))
 
     def load_profile_window(self):
+        self.setGeometry(100, 100, 500, 300)
         self.setCentralWidget(ProfileManager(self))
 
     def load_anot_window(self, anot_widget):
+        self.setGeometry(100, 100, 1200, 900)
         self.setCentralWidget(anot_widget)
 
 
