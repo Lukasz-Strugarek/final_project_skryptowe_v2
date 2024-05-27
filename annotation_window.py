@@ -1,9 +1,11 @@
 import os
 import pickle
-from PySide6.QtGui import QPainter, QPen, QColor, QPixmap, QMouseEvent, QPolygonF, QAction
+from PySide6.QtGui import QPainter, QPen, QColor, QPixmap, QMouseEvent, QPolygonF, QAction, QBrush
 from PySide6.QtWidgets import QApplication, QMainWindow, QPushButton, QVBoxLayout, QWidget, QFileDialog, \
-    QHBoxLayout, QGraphicsRectItem, QGraphicsPixmapItem, QGraphicsScene, QGraphicsView, QToolBar, QGraphicsPolygonItem
+    QHBoxLayout, QGraphicsRectItem, QGraphicsPixmapItem, QGraphicsScene, QGraphicsView, QToolBar, QMenu, QColorDialog, \
+    QGraphicsPolygonItem
 from PySide6.QtCore import Qt, QRectF
+
 
 class AnotationWindow(QMainWindow):
     def __init__(self, controller, filepath):
@@ -92,6 +94,7 @@ class AnotationWindow(QMainWindow):
             self.rectangles = []
             self.polygons = []
             self.last_drag_position = None
+            self.selected_item = None
 
             self.drawing = False
             self.start_point = None
@@ -103,6 +106,7 @@ class AnotationWindow(QMainWindow):
             self.tool = None  # No default tool
 
 
+            self.load_profiles()
 
         def load_image(self, file_path):
             pixmap = QPixmap(file_path)
@@ -127,12 +131,13 @@ class AnotationWindow(QMainWindow):
             self.translate(delta.x(), delta.y())
 
         def mousePressEvent(self, event: QMouseEvent):
+            print("mousePressEvent", event)
             if event.button() == Qt.LeftButton and self.image_item:
                 if self.tool == 'rectangle':
                     self.drawing = True
                     self.start_point = self.mapToScene(event.position().toPoint())
                     self.current_rect_item = QGraphicsRectItem(QRectF(self.start_point, self.start_point))
-                    self.current_rect_item.setPen(QPen(Qt.red, 2))
+                    self.current_rect_item.setPen(QPen(QColor(self.default_color), 2))
                     self.scene.addItem(self.current_rect_item)
                 elif self.tool == 'polygon':
                     point = self.mapToScene(event.position().toPoint())
@@ -140,7 +145,7 @@ class AnotationWindow(QMainWindow):
                         self.drawing = True
                         self.polygon_points = [point]
                         self.current_polygon_item = QGraphicsPolygonItem(QPolygonF(self.polygon_points))
-                        self.current_polygon_item.setPen(QPen(Qt.red, 2))
+                        self.current_polygon_item.setPen(QPen(QColor(self.default_color), 2))
                         self.scene.addItem(self.current_polygon_item)
                     else:
                         self.polygon_points.append(point)
@@ -148,12 +153,22 @@ class AnotationWindow(QMainWindow):
                         if self.temp_line:
                             self.scene.removeItem(self.temp_line)
                             self.temp_line = None
+                else:
+                    mouse_pos = self.mapToScene(event.pos())
 
-            elif event.button() == Qt.LeftButton:
-                self.last_drag_position = event.pos()
-                event.accept()
-            else:
-                super().mousePressEvent(event)
+                    # Get a list of items at the mouse position
+                    items = self.scene.items(mouse_pos)
+                    print(items)
+
+                    # Loop through the items and check if any of them are polygons
+                    for item in items:
+                        if isinstance(item, QGraphicsPolygonItem):
+                            # Call the select_item method with the polygon item
+                            self.choose_item(item)
+                            break
+                    if not self.selected_item:
+                        super().mousePressEvent(event)
+
 
         def mouseMoveEvent(self, event: QMouseEvent):
             if self.drawing and self.image_item:
@@ -166,7 +181,7 @@ class AnotationWindow(QMainWindow):
                     if self.temp_line:
                         self.scene.removeItem(self.temp_line)
                     self.temp_line = self.scene.addLine(self.polygon_points[-1].x(), self.polygon_points[-1].y(),
-                                                        point.x(), point.y(), QPen(Qt.red, 2))
+                                                        point.x(), point.y(), QPen(QColor(self.default_color), 2))
             elif event.buttons() == Qt.LeftButton:
                 if self.last_drag_position:
                     delta = event.pos() - self.last_drag_position
@@ -198,12 +213,101 @@ class AnotationWindow(QMainWindow):
                 self.drawing = False
                 self.polygon_points.append(self.polygon_points[0])
                 self.current_polygon_item.setPolygon(QPolygonF(self.polygon_points))
+                # self.current_polygon_item.mousePressEvent = lambda event : self.choose_item(self.current_polygon_item)
                 self.polygons.append(self.current_polygon_item)
                 self.current_polygon_item = None
                 self.polygon_points = []
                 if self.temp_line:
                     self.scene.removeItem(self.temp_line)
                     self.temp_line = None
+
+        def contextMenuEvent(self, event):
+            context_menu = QMenu(self)
+            for label in list(self.profiles[self.image_type].keys()):
+                context_menu.addAction(label)
+            delete_action = context_menu.addAction("Delete")
+
+            selected_action = context_menu.exec(event.globalPos())
+
+            if selected_action == delete_action:
+                self.delete_selected_item()
+            elif selected_action:
+                self.change_color_of_selected_item(selected_action.text())
+
+        def change_color_of_selected_item(self, color):
+            if self.selected_item:
+                new_color = QColor(self.profiles[self.image_type][color])
+                self.selected_item.setPen(QPen(new_color, 2))
+
+        def delete_selected_item(self):
+            print("Deleting selected item")
+            if self.selected_item:
+                if isinstance(self.selected_item, QGraphicsRectItem):
+                    self.rectangles.remove(self.selected_item)
+                elif isinstance(self.selected_item, QGraphicsPolygonItem):
+                    self.polygons.remove(self.selected_item)
+                self.scene.removeItem(self.selected_item)
+                self.selected_item = None
+
+        def load_annotations_from_pickle(self):
+            pickle_path = self.get_pickle_path(self.filepath)
+            if os.path.exists(pickle_path):
+                with open(pickle_path, 'rb') as f:
+                    data = pickle.load(f)
+                    for annotation in data["annotations"]:
+                        if annotation["type"] == "rectangle":
+                            rect_item = QGraphicsRectItem(QRectF(annotation["start"], annotation["end"]))
+                            rect_item.setPen(QPen(QColor(annotation.get("color", self.default_color)), 2))
+                            self.rectangles.append(rect_item)
+                            self.scene.addItem(rect_item)
+                        elif annotation["type"] == "polygon":
+                            polygon_item = QGraphicsPolygonItem(QPolygonF(annotation["points"]))
+                            polygon_item.setPen(QPen(QColor(annotation.get("color", self.default_color)), 2))
+                            self.polygons.append(polygon_item)
+                            self.scene.addItem(polygon_item)
+
+        def save_annotations_to_pickle(self):
+            annotations = {'type': self.image_type}
+            pickle_path = self.get_pickle_path(self.filepath)
+            annotations["annotations"] = []
+            for rect_item in self.rectangles:
+                annotations["annotations"].append({
+                    "type": "rectangle",
+                    "start": rect_item.rect().topLeft(),
+                    "end": rect_item.rect().bottomRight(),
+                    "color": rect_item.pen().color().name()
+                })
+            for polygon_item in self.polygons:
+                annotations["annotations"].append({
+                    "type": "polygon",
+                    "points": [point for point in polygon_item.polygon()],
+                    "color": polygon_item.pen().color().name()
+                })
+            with open(pickle_path, 'wb') as f:
+                pickle.dump(annotations, f)
+
+        @staticmethod
+        def get_pickle_path(filepath):
+            base, _ = os.path.splitext(filepath)
+            return base + "_anot.pkl"
+
+        def load_profiles(self):
+            with open('profiles.pkl', 'rb') as f:
+                self.profiles = pickle.load(f)
+
+            pickle_path = self.get_pickle_path(self.filepath)
+            if os.path.exists(pickle_path):
+                with open(pickle_path, 'rb') as fl:
+                    data = pickle.load(fl)
+                    self.image_type = data['type']
+                    self.default_color = list(self.profiles[self.image_type].values())[0]
+
+        def set_tool(self, tool):
+            self.tool = tool
+            if tool is None:
+                self.setDragMode(QGraphicsView.ScrollHandDrag)
+            else:
+                self.setDragMode(QGraphicsView.NoDrag)
 
         def save_annotations(self, output_path):
             if self.image_item:
@@ -228,48 +332,6 @@ class AnotationWindow(QMainWindow):
                 self.scene.removeItem(polygon_item)
             self.polygons.clear()
 
-        def set_tool(self, tool):
-            self.tool = tool
-            if tool is None:
-                self.setDragMode(QGraphicsView.ScrollHandDrag)
-            else:
-                self.setDragMode(QGraphicsView.NoDrag)
-
-        def load_annotations_from_pickle(self):
-            pickle_path = self.get_pickle_path(self.filepath)
-            if os.path.exists(pickle_path):
-                with open(pickle_path, 'rb') as f:
-                    data = pickle.load(f)
-                    for annotation in data["annotations"]:
-                        if annotation["type"] == "rectangle":
-                            rect_item = QGraphicsRectItem(QRectF(annotation["start"], annotation["end"]))
-                            rect_item.setPen(QPen(Qt.red, 2))
-                            self.rectangles.append(rect_item)
-                            self.scene.addItem(rect_item)
-                        elif annotation["type"] == "polygon":
-                            polygon_item = QGraphicsPolygonItem(QPolygonF(annotation["points"]))
-                            polygon_item.setPen(QPen(Qt.red, 2))
-                            self.polygons.append(polygon_item)
-                            self.scene.addItem(polygon_item)
-
-        def save_annotations_to_pickle(self):
-            pickle_path = self.get_pickle_path(self.filepath)
-            annotations = {"annotations": []}
-            for rect_item in self.rectangles:
-                annotations["annotations"].append({
-                    "type": "rectangle",
-                    "start": rect_item.rect().topLeft(),
-                    "end": rect_item.rect().bottomRight()
-                })
-            for polygon_item in self.polygons:
-                annotations["annotations"].append({
-                    "type": "polygon",
-                    "points": [point for point in polygon_item.polygon()]
-                })
-            with open(pickle_path, 'wb') as f:
-                pickle.dump(annotations, f)
-
-        @staticmethod
-        def get_pickle_path(filepath):
-            base, _ = os.path.splitext(filepath)
-            return base + "_anot.pkl"
+        def choose_item(self, current_polygon_item):
+            print("item chosen")
+            self.selected_item = current_polygon_item
