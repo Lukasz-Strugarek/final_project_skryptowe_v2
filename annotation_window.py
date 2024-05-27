@@ -5,11 +5,13 @@ from PySide6.QtWidgets import QApplication, QMainWindow, QPushButton, QVBoxLayou
     QHBoxLayout, QGraphicsRectItem, QGraphicsPixmapItem, QGraphicsScene, QGraphicsView, QToolBar, QMenu, QColorDialog, \
     QGraphicsPolygonItem
 from PySide6.QtCore import Qt, QRectF
+import running_FIS
 
 
 class AnotationWindow(QMainWindow):
     def __init__(self, controller, filepath):
         super().__init__()
+        self.filepath = filepath
         self.controller = controller
         self.setWindowTitle("Adnotacje obrazów medycznych")
         self.setGeometry(100, 100, 1200, 900)
@@ -27,12 +29,17 @@ class AnotationWindow(QMainWindow):
         self.polygon_action.setCheckable(True)
         self.toolbar.addAction(self.polygon_action)
 
+        self.automatic_tool = QAction("Magic", self)
+        self.polygon_action.setCheckable(True)
+        self.toolbar.addAction(self.automatic_tool)
+
         self.cancel_action = QAction("Cancel", self)
         self.toolbar.addAction(self.cancel_action)
 
         self.rect_action.triggered.connect(lambda: self.select_tool('rectangle'))
         self.polygon_action.triggered.connect(lambda: self.select_tool('polygon'))
         self.cancel_action.triggered.connect(lambda: self.select_tool(None))
+        self.automatic_tool.triggered.connect(lambda: self.run_fis(self.filepath))
 
         self.save_button = QPushButton("Export to image")
         self.clear_button = QPushButton("Wyczyść adnotacje")
@@ -79,6 +86,13 @@ class AnotationWindow(QMainWindow):
     def save_and_close_annotations(self):
         self.annotation_widget.save_annotations_to_pickle()
         self.controller.load_initial_window()
+
+    def run_fis(self, filepath):
+        print("starting")
+        self.select_tool(None)
+        self.contours = running_FIS.group_pixels_by_cell(filepath)
+        print(self.contours)
+
 
     class AnnotationWidget(QGraphicsView):
         def __init__(self, filepath):
