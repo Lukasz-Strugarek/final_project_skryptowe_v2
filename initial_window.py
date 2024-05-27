@@ -1,13 +1,23 @@
+import pickle
 import sys
-
+import os
 from PySide6.QtGui import QPainter, QPen, QColor, QPixmap
 from PySide6.QtWidgets import QApplication, QMainWindow, QPushButton, QVBoxLayout, QWidget, QListWidget, QFileDialog, \
     QHBoxLayout, QLabel, QLineEdit, QComboBox, QDoubleSpinBox, QSpinBox, QFormLayout, QMessageBox, QGraphicsRectItem, \
-    QGraphicsPixmapItem, QGraphicsScene, QGraphicsView
+    QGraphicsPixmapItem, QGraphicsScene, QGraphicsView, QColorDialog
 from PySide6.QtCore import Qt, QRectF
 from tiff_splitter import split_tiff
 
 
+def load_profiles():
+    if os.path.exists('profiles.pkl'):
+        with open('profiles.pkl', 'rb') as file:
+            return pickle.load(file)
+    return {}
+
+def save_profiles(profiles):
+    with open('profiles.pkl', 'wb') as file:
+        pickle.dump(profiles, file)
 
 class MainWindow(QMainWindow):
     def __init__(self):
@@ -67,7 +77,7 @@ class MainWindow(QMainWindow):
         self.setCentralWidget(self.tiff_window)
 
     def new_profile(self):
-        self.new_profile_window = ProfileWindow(self)
+        self.new_profile_window = ProfileManager(self)
         self.setCentralWidget(self.new_profile_window)
 
     def create_new_file(self):
@@ -457,63 +467,73 @@ class AnotationWindow(QMainWindow):
         self.main_window.setCentralWidget(MainWindow())
 
 
-class ProfileWindow(QWidget):
+class ProfileManager(QWidget):
     def __init__(self, main_window):
         super().__init__()
         self.main_window = main_window
-        print(type(self.main_window))
-        self.setWindowTitle("New image")
-        self.setGeometry(150, 150, 600, 400)
+        self.profiles = load_profiles()
+        self.labels = {}
 
-        layout = QFormLayout()
+        self.init_ui()
 
-        self.file_path_input = QLineEdit(self)
-        self.file_path_input.setPlaceholderText("Wybierz plik TIFF")
-        self.file_path_input.setReadOnly(True)
-        self.file_button = QPushButton("Wybierz plik")
+    def init_ui(self):
+        self.setWindowTitle("Profile Manager")
 
+        layout = QVBoxLayout()
 
-        self.output_path_input = QLineEdit(self)
-        self.output_path_input.setPlaceholderText("Wybierz ścieżkę zapisu")
-        self.output_path_input.setReadOnly(True)
-        self.output_button = QPushButton("Wybierz ścieżkę")
+        self.profile_name_label = QLabel("Profile Name:")
+        self.profile_name_entry = QLineEdit()
 
-        self.tile_size_input = QSpinBox(self)
-        self.tile_size_input.setRange(1, 10000)
-        self.tile_size_input.setValue(128)
+        self.label_name_label = QLabel("Label Name:")
+        self.label_name_entry = QLineEdit()
 
-        self.overlap_input = QDoubleSpinBox(self)
-        self.overlap_input.setRange(0, 1)
-        self.overlap_input.setSingleStep(0.01)
-        self.overlap_input.setValue(0.1)
+        self.add_label_button = QPushButton("Add Label")
+        self.add_label_button.clicked.connect(self.add_label)
 
-        self.cutoff_input = QDoubleSpinBox(self)
-        self.cutoff_input.setRange(0, 1)
-        self.cutoff_input.setSingleStep(0.01)
-        self.cutoff_input.setValue(0.05)
+        self.labels_listbox = QListWidget()
 
-        self.threshold_input = QSpinBox(self)
-        self.threshold_input.setRange(0, 255)
-        self.threshold_input.setValue(245)
+        self.save_profile_button = QPushButton("Save Profile")
+        self.save_profile_button.clicked.connect(self.save_profile)
 
-        self.run_button = QPushButton("Save")
-        # self.run_button.clicked.connect(self.save_profile)
-
-        self.cancel_button = QPushButton("Cancel")
-        self.cancel_button.clicked.connect(self.cancel_profile)
-
-        layout.addRow("Plik TIFF:", self.file_path_input)
-        layout.addRow("", self.file_button)
-        layout.addRow("Ścieżka zapisu:", self.output_path_input)
-        layout.addRow("", self.output_button)
-        layout.addRow("Tile size:", self.tile_size_input)
-        layout.addRow("Overlap:", self.overlap_input)
-        layout.addRow("Cutoff:", self.cutoff_input)
-        layout.addRow("Threshold:", self.threshold_input)
-        layout.addRow("", self.run_button)
-        layout.addRow("", self.cancel_button)
+        layout.addWidget(self.profile_name_label)
+        layout.addWidget(self.profile_name_entry)
+        layout.addWidget(self.label_name_label)
+        layout.addWidget(self.label_name_entry)
+        layout.addWidget(self.add_label_button)
+        layout.addWidget(self.labels_listbox)
+        layout.addWidget(self.save_profile_button)
 
         self.setLayout(layout)
+
+    def add_label(self):
+        label_name = self.label_name_entry.text()
+        if not label_name:
+            QMessageBox.warning(self, "Warning", "Label name cannot be empty!")
+            return
+
+        color = QColorDialog.getColor()
+        if not color.isValid():
+            return
+
+        color_name = color.name()
+        self.labels[label_name] = color_name
+        self.labels_listbox.addItem(f"{label_name}: {color_name}")
+        self.label_name_entry.clear()
+
+    def save_profile(self):
+        profile_name = self.profile_name_entry.text()
+        if not profile_name:
+            QMessageBox.warning(self, "Warning", "Profile name cannot be empty!")
+            return
+
+        self.profiles[profile_name] = self.labels.copy()
+        save_profiles(self.profiles)
+
+        self.labels_listbox.clear()
+        self.profile_name_entry.clear()
+        self.labels.clear()
+
+        QMessageBox.information(self, "Info", "Profile saved successfully!")
 
     def cancel_profile(self):
         self.main_window.setGeometry(100, 100, 400, 200)
