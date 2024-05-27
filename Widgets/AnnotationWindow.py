@@ -1,19 +1,20 @@
 import os
 import pickle
-from PySide6.QtGui import QPainter, QPen, QColor, QPixmap, QMouseEvent, QPolygonF, QAction, QBrush
-from PySide6.QtWidgets import QApplication, QMainWindow, QPushButton, QVBoxLayout, QWidget, QFileDialog, \
-    QHBoxLayout, QGraphicsRectItem, QGraphicsPixmapItem, QGraphicsScene, QGraphicsView, QToolBar, QMenu, QColorDialog, \
+from PySide6.QtGui import QPainter, QPen, QColor, QPixmap, QMouseEvent, QPolygonF, QAction
+from PySide6.QtWidgets import QMainWindow, QPushButton, QVBoxLayout, QWidget, QFileDialog, \
+    QHBoxLayout, QGraphicsRectItem, QGraphicsPixmapItem, QGraphicsScene, QGraphicsView, QToolBar, QMenu, \
     QGraphicsPolygonItem
 from PySide6.QtCore import Qt, QRectF, QPointF
-import running_FIS
+from FIS import running_FIS
 
 
 class AnotationWindow(QMainWindow):
     def __init__(self, controller, filepath):
+        #initializing window
         super().__init__()
         self.filepath = filepath
         self.controller = controller
-        self.setWindowTitle("Adnotacje obrazów medycznych")
+        self.setWindowTitle("Images annotation")
         self.setGeometry(100, 100, 1200, 900)
 
         self.annotation_widget = self.AnnotationWidget(filepath)
@@ -21,18 +22,22 @@ class AnotationWindow(QMainWindow):
         self.toolbar = QToolBar()
         self.addToolBar(self.toolbar)
 
+        #rectangle button on toolbar
         self.rect_action = QAction("Rectangle", self)
         self.rect_action.setCheckable(True)
         self.toolbar.addAction(self.rect_action)
 
+        # polygon button on toolbar
         self.polygon_action = QAction("Polygon", self)
         self.polygon_action.setCheckable(True)
         self.toolbar.addAction(self.polygon_action)
 
+        # magic button on toolbar
         self.automatic_tool = QAction("Magic", self)
         self.polygon_action.setCheckable(True)
         self.toolbar.addAction(self.automatic_tool)
 
+        # cancel button on toolbar
         self.cancel_action = QAction("Cancel", self)
         self.toolbar.addAction(self.cancel_action)
 
@@ -41,9 +46,10 @@ class AnotationWindow(QMainWindow):
         self.cancel_action.triggered.connect(lambda: self.select_tool(None))
         self.automatic_tool.triggered.connect(lambda: self.run_fis(self.filepath))
 
+        #creating buttons to operate after work on image
         self.save_button = QPushButton("Export to image")
-        self.clear_button = QPushButton("Wyczyść adnotacje")
-        self.back_button = QPushButton("Cancel")
+        self.clear_button = QPushButton("Clear all")
+        self.back_button = QPushButton("Close without saving")
         self.save_and_close_button = QPushButton("Save and Close")
 
         self.save_button.clicked.connect(self.export_to_image_annotations)
@@ -67,35 +73,33 @@ class AnotationWindow(QMainWindow):
 
         self.setCentralWidget(container)
 
-    def select_tool(self, tool):
+    def select_tool(self, tool): # showing which tool is selected
         self.annotation_widget.set_tool(tool)
         self.rect_action.setChecked(tool == 'rectangle')
         self.polygon_action.setChecked(tool == 'polygon')
 
-    def export_to_image_annotations(self):
-        file_name, _ = QFileDialog.getSaveFileName(self, "Zapisz adnotacje", "", "Obrazy (*.png *.jpg *.jpeg)")
+    def export_to_image_annotations(self): # exporting file with annotations to image
+        file_name, _ = QFileDialog.getSaveFileName(self, "Save annotation", "", "Obrazy (*.png *.jpg *.jpeg)")
         if file_name:
             self.annotation_widget.save_annotations(file_name)
 
-    def clear_annotations(self):
+    def clear_annotations(self): # deleting all annotations
         self.annotation_widget.clear_annotations()
 
-    def cancel_annotations(self):
+    def cancel_annotations(self): # closing window without saving work
         self.controller.load_initial_window()
 
-    def save_and_close_annotations(self):
+    def save_and_close_annotations(self): # closing window after saving work
         self.annotation_widget.save_annotations_to_pickle()
         self.controller.load_initial_window()
 
-    def run_fis(self, filepath):
-        print("starting")
+    def run_fis(self, filepath): # running FIS
         self.select_tool(None)
         contours = running_FIS.group_pixels_by_cell(filepath)
-        print("Contours received from FIS:", contours)
         self.annotation_widget.draw_polygons(contours)
 
 
-    class AnnotationWidget(QGraphicsView):
+    class AnnotationWidget(QGraphicsView): # image widget
         def __init__(self, filepath):
             super().__init__()
             self.filepath = filepath
@@ -123,7 +127,7 @@ class AnotationWindow(QMainWindow):
 
             self.load_profiles()
 
-        def load_image(self, file_path):
+        def load_image(self, file_path): # loading image from filepath
             pixmap = QPixmap(file_path)
             if self.image_item:
                 self.scene.removeItem(self.image_item)
@@ -132,7 +136,7 @@ class AnotationWindow(QMainWindow):
             self.setSceneRect(QRectF(pixmap.rect()))
             self.load_annotations_from_pickle()
 
-        def wheelEvent(self, event):
+        def wheelEvent(self, event): # zooming image
             zoom_in_factor = 1.01
             zoom_out_factor = 0.99
             old_pos = self.mapToScene(event.position().toPoint())
@@ -145,8 +149,7 @@ class AnotationWindow(QMainWindow):
             delta = new_pos - old_pos
             self.translate(delta.x(), delta.y())
 
-        def mousePressEvent(self, event: QMouseEvent):
-            print("mousePressEvent", event)
+        def mousePressEvent(self, event: QMouseEvent): # mouse press on image possible outcomes: point to rect, poly or selecting an label to modify
             if event.button() == Qt.LeftButton and self.image_item:
                 if self.tool == 'rectangle':
                     self.drawing = True
@@ -255,7 +258,6 @@ class AnotationWindow(QMainWindow):
                 self.selected_item.setPen(QPen(new_color, 2))
 
         def delete_selected_item(self):
-            print("Deleting selected item")
             if self.selected_item:
                 if isinstance(self.selected_item, QGraphicsRectItem):
                     self.rectangles.remove(self.selected_item)
@@ -301,13 +303,12 @@ class AnotationWindow(QMainWindow):
             with open(pickle_path, 'wb') as f:
                 pickle.dump(annotations, f)
 
-        @staticmethod
         def get_pickle_path(filepath):
             base, _ = os.path.splitext(filepath)
             return base + "_anot.pkl"
 
         def load_profiles(self):
-            with open('profiles.pkl', 'rb') as f:
+            with open('../profiles.pkl', 'rb') as f:
                 self.profiles = pickle.load(f)
 
             pickle_path = self.get_pickle_path(self.filepath)

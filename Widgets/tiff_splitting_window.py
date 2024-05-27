@@ -1,16 +1,11 @@
-from PySide6.QtGui import QPainter, QPen, QColor, QPixmap
-from PySide6.QtWidgets import QApplication, QMainWindow, QPushButton, QVBoxLayout, QWidget, QListWidget, QFileDialog, \
-    QHBoxLayout, QLabel, QLineEdit, QComboBox, QDoubleSpinBox, QSpinBox, QFormLayout, QMessageBox, QGraphicsRectItem, \
-    QGraphicsPixmapItem, QGraphicsScene, QGraphicsView, QColorDialog
-from PySide6.QtCore import Qt, QRectF
-
-from tiff_splitter import split_tiff
-
+from PySide6.QtWidgets import QPushButton, QWidget, QFileDialog, \
+QLineEdit, QMessageBox, QFormLayout, QSpinBox, QDoubleSpinBox
+from TIFFsplitting.tiff_splitter import split_tiff
 
 class TiffWindow(QWidget):
-    def __init__(self, controller):
+    def __init__(self, main_window):
         super().__init__()
-        self.controller = controller
+        self.main_window = main_window
         self.setWindowTitle("New image")
         self.setGeometry(150, 150, 600, 400)
 
@@ -67,8 +62,7 @@ class TiffWindow(QWidget):
 
     def select_file(self):
         options = QFileDialog.Options()
-        file_path, _ = QFileDialog.getOpenFileName(self, "Wybierz plik TIFF", "", "TIFF Files (*.tif *.tiff)",
-                                                   options=options)
+        file_path, _ = QFileDialog.getOpenFileName(self, "Wybierz plik TIFF", "", "TIFF Files (*.tif *.tiff)", options=options)
         if file_path:
             self.file_path_input.setText(file_path)
 
@@ -92,8 +86,7 @@ class TiffWindow(QWidget):
 
         split_tiff(file_path, output_path, tile_size, overlap, cutoff, threshold)
         QMessageBox.information(self, "Sukces", "Proces zakończony pomyślnie")
-        self.controller.load_initial_window()
-
+        self.main_window.setCentralWidget(self.main_window.initialize())
 
     def cancel_script(self):
-        self.controller.load_initial_window()
+        self.main_window.setCentralWidget(self.main_window.initialize())

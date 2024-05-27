@@ -1,11 +1,8 @@
 import shutil
 
-from PySide6.QtGui import QPainter, QPen, QColor, QPixmap
-from PySide6.QtWidgets import QApplication, QMainWindow, QPushButton, QVBoxLayout, QWidget, QListWidget, QFileDialog, \
-    QHBoxLayout, QLabel, QLineEdit, QComboBox, QDoubleSpinBox, QSpinBox, QFormLayout, QMessageBox, QGraphicsRectItem, \
-    QGraphicsPixmapItem, QGraphicsScene, QGraphicsView, QColorDialog
-from PySide6.QtCore import Qt, QRectF
-from pickle_functions import *
+from PySide6.QtWidgets import QPushButton, QVBoxLayout, QWidget, QFileDialog, \
+    QHBoxLayout, QLabel, QLineEdit, QComboBox, QMessageBox
+from functions.pickle_functions import *
 
 class NewFileWindow(QWidget):
     def __init__(self):
@@ -24,11 +21,11 @@ class NewFileWindow(QWidget):
 
         #pole na ścieżkę
         self.path_input = QLineEdit(self)
-        self.path_input.setPlaceholderText("Wybierz ścieżkę obrazu")
+        self.path_input.setPlaceholderText("Select image path")
         self.path_input.setReadOnly(True)
 
         # Tworzenie przycisku do wyboru ścieżki zapisu
-        self.path_button = QPushButton("Wybierz ścieżkę")
+        self.path_button = QPushButton("Select path")
         self.path_button.clicked.connect(self.select_image_path)
 
         # Layout dla wyboru ścieżki
@@ -38,11 +35,11 @@ class NewFileWindow(QWidget):
 
         # pole na ścieżkę
         self.destination_path_input = QLineEdit(self)
-        self.destination_path_input.setPlaceholderText("Wybierz ścieżkę zapisu")
+        self.destination_path_input.setPlaceholderText("Select new path")
         self.destination_path_input.setReadOnly(True)
 
         # Tworzenie przycisku do wyboru ścieżki zapisu
-        self.destination_path_button = QPushButton("Wybierz ścieżkę")
+        self.destination_path_button = QPushButton("Select path")
         self.destination_path_button.clicked.connect(self.select_save_path)
 
         # Layout dla wyboru ścieżki
@@ -98,6 +95,7 @@ class NewFileWindow(QWidget):
 
             except shutil.SameFileError:
                 QMessageBox.warning(self, "Error", "File already exists")
+                return
 
             # Ścieżka do pliku z końcówką _anot.pkl
             anot_file_path = os.path.join(destination_folder, f"{base_name}_anot.pkl")
@@ -113,13 +111,13 @@ class NewFileWindow(QWidget):
     def select_image_path(self):
         # Funkcja otwierająca dialog do wyboru ścieżki zapisu
         options = QFileDialog.Options()
-        file_path, _ = QFileDialog.getOpenFileName(self, "Wybierz ścieżkę zapisu", "", "Wszystkie pliki (*)",
+        file_path, _ = QFileDialog.getOpenFileName(self, "Select path", "", "Obrazy (*.png *.jpg *.jpeg)",
                                                    options=options)
         if file_path:
             self.path_input.setText(file_path)
 
     def select_save_path(self):
         options = QFileDialog.Options()
-        output_path = QFileDialog.getExistingDirectory(self, "Wybierz ścieżkę zapisu", options=options)
+        output_path = QFileDialog.getExistingDirectory(self, "Select path", options=options)
         if output_path:
             self.destination_path_input.setText(output_path)

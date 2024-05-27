@@ -1,9 +1,7 @@
-from pickle_functions import *
-from PySide6.QtGui import QPainter, QPen, QColor, QPixmap, QMouseEvent, QPolygonF
-from PySide6.QtWidgets import QApplication, QMainWindow, QPushButton, QVBoxLayout, QWidget, QListWidget, QFileDialog, \
-    QHBoxLayout, QLabel, QLineEdit, QComboBox, QDoubleSpinBox, QSpinBox, QFormLayout, QMessageBox, QGraphicsRectItem, \
-    QGraphicsPixmapItem, QGraphicsScene, QGraphicsView, QColorDialog, QGraphicsPolygonItem
-from PySide6.QtCore import Qt, QRectF
+from functions.pickle_functions import *
+from PySide6.QtWidgets import QPushButton, QVBoxLayout, QWidget, QListWidget, QLabel, QLineEdit, QMessageBox, \
+    QColorDialog
+
 
 class ProfileManager(QWidget):
     def __init__(self, controller):

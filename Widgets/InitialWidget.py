@@ -6,8 +6,8 @@ from PySide6.QtWidgets import QApplication, QMainWindow, QPushButton, QVBoxLayou
     QGraphicsPixmapItem, QGraphicsScene, QGraphicsView, QColorDialog
 from PySide6.QtCore import Qt, QRectF
 
-from annotation_window import AnotationWindow
-from new_file_widget import NewFileWindow
+from Widgets.AnnotationWindow import AnotationWindow
+from Widgets.NewFileWindow import NewFileWindow
 
 
 class InitialWindow(QWidget):
@@ -61,7 +61,7 @@ class InitialWindow(QWidget):
     def open_file(self):
         # Funkcja obsługująca przycisk "Otwórz"
         options = QFileDialog.Options()
-        file_name, _ = QFileDialog.getOpenFileName(self, "Otwórz plik", "", "Wszystkie pliki (*)", options=options)
+        file_name, _ = QFileDialog.getOpenFileName(self, "Open file", "", "Wszystkie pliki (*)", options=options)
         base, _ = os.path.splitext(file_name)
         anot_file_path = f"{base}_anot.pkl"
         if file_name and os.path.exists(anot_file_path):

@@ -1,5 +1,5 @@
 import cv2
-from mamdani_class import mamdani
+from FIS.mamdani_class import mamdani
 from PIL import Image, ImageOps
 import colorsys
 import matplotlib.pyplot as plt

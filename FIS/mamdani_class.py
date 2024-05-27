@@ -1,6 +1,6 @@
 import re
 
-from triangle_functions_holder import triangleFunctionHolder as trianFunc
+from FIS.triangle_functions_holder import triangleFunctionHolder as trianFunc
 
 class mamdani:
     def __init__(self, threshold):

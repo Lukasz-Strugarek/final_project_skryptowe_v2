@@ -1,26 +1,28 @@
 from PySide6.QtWidgets import QPushButton, QWidget, QFileDialog, \
-QLineEdit, QMessageBox, QFormLayout, QSpinBox, QDoubleSpinBox
-from tiff_splitter import split_tiff
+    QLineEdit, QDoubleSpinBox, QSpinBox, QFormLayout, QMessageBox
+
+from TIFFsplitting.tiff_splitter import split_tiff
+
 
 class TiffWindow(QWidget):
-    def __init__(self, main_window):
+    def __init__(self, controller):
         super().__init__()
-        self.main_window = main_window
+        self.controller = controller
         self.setWindowTitle("New image")
         self.setGeometry(150, 150, 600, 400)
 
         layout = QFormLayout()
 
         self.file_path_input = QLineEdit(self)
-        self.file_path_input.setPlaceholderText("Wybierz plik TIFF")
+        self.file_path_input.setPlaceholderText("Select TIFF file")
         self.file_path_input.setReadOnly(True)
-        self.file_button = QPushButton("Wybierz plik")
+        self.file_button = QPushButton("Select path")
         self.file_button.clicked.connect(self.select_file)
 
         self.output_path_input = QLineEdit(self)
-        self.output_path_input.setPlaceholderText("Wybierz ścieżkę zapisu")
+        self.output_path_input.setPlaceholderText("Select output path")
         self.output_path_input.setReadOnly(True)
-        self.output_button = QPushButton("Wybierz ścieżkę")
+        self.output_button = QPushButton("Select path")
         self.output_button.clicked.connect(self.select_output_path)
 
         self.tile_size_input = QSpinBox(self)
@@ -47,9 +49,9 @@ class TiffWindow(QWidget):
         self.cancel_button = QPushButton("Cancel")
         self.cancel_button.clicked.connect(self.cancel_script)
 
-        layout.addRow("Plik TIFF:", self.file_path_input)
+        layout.addRow("TIFF file:", self.file_path_input)
         layout.addRow("", self.file_button)
-        layout.addRow("Ścieżka zapisu:", self.output_path_input)
+        layout.addRow("Output path:", self.output_path_input)
         layout.addRow("", self.output_button)
         layout.addRow("Tile size:", self.tile_size_input)
         layout.addRow("Overlap:", self.overlap_input)
@@ -62,13 +64,14 @@ class TiffWindow(QWidget):
 
     def select_file(self):
         options = QFileDialog.Options()
-        file_path, _ = QFileDialog.getOpenFileName(self, "Wybierz plik TIFF", "", "TIFF Files (*.tif *.tiff)", options=options)
+        file_path, _ = QFileDialog.getOpenFileName(self, "Select TIFF file", "", "TIFF Files (*.tif *.tiff)",
+                                                   options=options)
         if file_path:
             self.file_path_input.setText(file_path)
 
     def select_output_path(self):
         options = QFileDialog.Options()
-        output_path = QFileDialog.getExistingDirectory(self, "Wybierz ścieżkę zapisu", options=options)
+        output_path = QFileDialog.getExistingDirectory(self, "Select output path", options=options)
         if output_path:
             self.output_path_input.setText(output_path)
 
@@ -81,12 +84,13 @@ class TiffWindow(QWidget):
         threshold = self.threshold_input.value()
 
         if not file_path or not output_path:
-            QMessageBox.warning(self, "Błąd", "Wybierz plik TIFF i ścieżkę zapisu")
+            QMessageBox.warning(self, "Błąd", "Select TIFF and output directory")
             return
 
         split_tiff(file_path, output_path, tile_size, overlap, cutoff, threshold)
-        QMessageBox.information(self, "Sukces", "Proces zakończony pomyślnie")
-        self.main_window.setCentralWidget(self.main_window.initialize())
+        QMessageBox.information(self, "Success", "Process executed correctly")
+        self.controller.load_initial_window()
+
 
     def cancel_script(self):
-        self.main_window.setCentralWidget(self.main_window.initialize())
+        self.controller.load_initial_window()

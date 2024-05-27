@@ -2,11 +2,8 @@ import pickle
 import shutil
 import sys
 import os
-from PySide6.QtGui import QPainter, QPen, QColor, QPixmap
-from PySide6.QtWidgets import QApplication, QMainWindow, QPushButton, QVBoxLayout, QWidget, QListWidget, QFileDialog, \
-    QHBoxLayout, QLabel, QLineEdit, QComboBox, QDoubleSpinBox, QSpinBox, QFormLayout, QMessageBox, QGraphicsRectItem, \
-    QGraphicsPixmapItem, QGraphicsScene, QGraphicsView, QColorDialog
-from PySide6.QtCore import Qt, QRectF
+from PySide6.QtWidgets import QApplication, QMainWindow, QWidget, QListWidget, QLabel, QLineEdit, QComboBox, QDoubleSpinBox, QSpinBox, QFormLayout, \
+    QColorDialog
 from tiff_splitter import split_tiff
 
 
@@ -317,7 +314,7 @@ class TiffWindow(QWidget):
 
 from PySide6.QtWidgets import QMainWindow, QGraphicsView, QGraphicsScene, QGraphicsPixmapItem, QGraphicsRectItem, QGraphicsPolygonItem, QVBoxLayout, QHBoxLayout, QPushButton, QFileDialog, QWidget, QMessageBox, QToolBar
 from PySide6.QtGui import QPixmap, QPainter, QPen, QColor, QPolygonF, QMouseEvent, QAction
-from PySide6.QtCore import Qt, QRectF, QPointF
+from PySide6.QtCore import Qt, QRectF
 
 
 class AnnotationWidget(QGraphicsView):
