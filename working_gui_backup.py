@@ -311,10 +311,6 @@ class TiffWindow(QWidget):
 
 
     def cancel_script(self):
-        """
-
-        :return:
-        """
         self.main_window.setGeometry(100, 100, 400, 200)
         self.main_window.setCentralWidget(MainWindow())
 
