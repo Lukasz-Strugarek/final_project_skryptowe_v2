@@ -4,7 +4,7 @@ from PySide6.QtGui import QPainter, QPen, QColor, QPixmap, QMouseEvent, QPolygon
 from PySide6.QtWidgets import QApplication, QMainWindow, QPushButton, QVBoxLayout, QWidget, QFileDialog, \
     QHBoxLayout, QGraphicsRectItem, QGraphicsPixmapItem, QGraphicsScene, QGraphicsView, QToolBar, QMenu, QColorDialog, \
     QGraphicsPolygonItem
-from PySide6.QtCore import Qt, QRectF
+from PySide6.QtCore import Qt, QRectF, QPointF
 import running_FIS
 
 
@@ -90,8 +90,9 @@ class AnotationWindow(QMainWindow):
     def run_fis(self, filepath):
         print("starting")
         self.select_tool(None)
-        self.contours = running_FIS.group_pixels_by_cell(filepath)
-        print(self.contours)
+        contours = running_FIS.group_pixels_by_cell(filepath)
+        print("Contours received from FIS:", contours)
+        self.annotation_widget.draw_polygons(contours)
 
 
     class AnnotationWidget(QGraphicsView):
@@ -347,5 +348,11 @@ class AnotationWindow(QMainWindow):
             self.polygons.clear()
 
         def choose_item(self, current_polygon_item):
-            print("item chosen")
             self.selected_item = current_polygon_item
+
+        def draw_polygons(self, contours):
+            for contour in contours:
+                polygon_item = QGraphicsPolygonItem(QPolygonF([QPointF(p[0], p[1]) for p in contour]))
+                polygon_item.setPen(QPen(QColor(self.default_color), 2))
+                self.polygons.append(polygon_item)
+                self.scene.addItem(polygon_item)

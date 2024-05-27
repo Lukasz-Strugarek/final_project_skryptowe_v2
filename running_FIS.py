@@ -1,10 +1,10 @@
+import cv2
 from mamdani_class import mamdani
 from PIL import Image, ImageOps
 import colorsys
 import matplotlib.pyplot as plt
 import numpy as np
-from skimage import measure
-import os
+
 
 mamfis = mamdani(0.3)
 mamfis.addVariable("saturation", "triangle", 0.25, 0.5, 0.6)
@@ -92,12 +92,12 @@ def modify_image(input_path):
             if(mamfis.getResult() == 'cell'):
                 i = i + 1
                 modified_rgb_pixel = (255, 0, 0)
+                cell_pixels.append((x, y))
             elif(mamfis.getResult() == 'notCell'):
                 modified_rgb_pixel = colorsys.hsv_to_rgb(*modified_hsv_pixel)
                 modified_rgb_pixel = tuple(int(x * 255) for x in modified_rgb_pixel)
 
             modified_img.putpixel((x, y), modified_rgb_pixel)
-            cell_pixels.append((x, y))
     print(i)
 
     plt.imshow(modified_img)
@@ -110,7 +110,6 @@ def modify_image(input_path):
 
 
 def group_pixels_by_cell(filepath):
-
     img = Image.open(filepath)
     cell_pixels = modify_image(filepath)
 
@@ -120,13 +119,17 @@ def group_pixels_by_cell(filepath):
     for x, y in cell_pixels:
         binary_img[y, x] = 255  # Set pixel to white (255) for cell pixels
 
-    # Find contours of connected components
-    contours = measure.find_contours(binary_img, 0.5)
+    # Use OpenCV to find contours
+    contours, _ = cv2.findContours(binary_img, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_NONE)
 
-    # Approximate contours to polygons
+    print(contours)
+
+    # Create polygons from contours
     cell_polygons = []
     for contour in contours:
-        contour = np.flip(contour, axis=1)  # Convert (row, col) to (x, y) format
-        print(contours)
+        contour = contour.squeeze()
+        if len(contour.shape) == 2 and contour.shape[1] == 2:  # Ensure it's a valid contour
+            polygon = [(point[0], point[1]) for point in contour]
+            cell_polygons.append(polygon)
 
     return cell_polygons
