@@ -303,7 +303,7 @@ class AnotationWindow(QMainWindow):
             with open(pickle_path, 'wb') as f:
                 pickle.dump(annotations, f)
 
-        def get_pickle_path(filepath):
+        def get_pickle_path(self,filepath):
             base, _ = os.path.splitext(filepath)
             return base + "_anot.pkl"
 
@@ -312,6 +312,7 @@ class AnotationWindow(QMainWindow):
                 self.profiles = pickle.load(f)
 
             pickle_path = self.get_pickle_path(self.filepath)
+
             if os.path.exists(pickle_path):
                 with open(pickle_path, 'rb') as fl:
                     data = pickle.load(fl)
@@ -329,14 +330,19 @@ class AnotationWindow(QMainWindow):
             if self.image_item:
                 image = self.image_item.pixmap().toImage()
                 painter = QPainter(image)
+
                 for rect_item in self.rectangles:
                     rect = rect_item.rect()
-                    painter.setPen(QPen(QColor(255, 0, 0), 2))
+                    pen = rect_item.pen()  # get the pen from the item
+                    painter.setPen(pen)  # use the pen for drawing
                     painter.drawRect(rect)
+
                 for polygon_item in self.polygons:
                     polygon = polygon_item.polygon()
-                    painter.setPen(QPen(QColor(255, 0, 0), 2))
+                    pen = polygon_item.pen()
+                    painter.setPen(pen)
                     painter.drawPolygon(polygon)
+
                 image.save(output_path)
                 painter.end()
 
